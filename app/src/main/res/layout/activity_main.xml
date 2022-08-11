@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="10dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Зал: 6"
+        android:textColor="@color/red"
+        android:textSize="25sp"
+        android:gravity="center_horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.example.seatreservations.SeatReservationsView
+        android:id="@+id/element"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:item_drawable="@drawable/default_shape"
+        app:item_size="40dp"
+        app:item_spacing="40dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button"
+        app:row_text_font="@font/japari_sans"
+        app:row_text_size="10sp"
+        app:rows_spacing="40dp"
+        app:scene_drawable="@drawable/default_scene_shape"
+        app:scene_height="25dp"
+        app:scene_width="400dp"
+        app:selected_color="@color/green"
+        app:booked_color="@color/pink"
+        app:selected_text_color="@color/white"
+        app:selected_text_size="30sp" />
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@color/red"
+        android:layout_marginTop="20dp"
+        android:text="Обновить"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/element" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

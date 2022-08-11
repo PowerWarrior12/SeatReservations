@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="seat_reservation">
+        <attr format="color" name="selected_color"/>
+        <attr format="color" name="booked_color"/>
+        <attr format="color" name="free_color"/>
+        <attr format="color" name="selected_text_color"/>
+        <attr format="color" name="row_text_color"/>
+
+        <attr format="reference" name="scene_drawable"/>
+        <attr format="reference" name="item_drawable"/>
+
+        <attr format="dimension" name="item_spacing"/>
+        <attr format="dimension" name="rows_spacing"/>
+        <attr format="dimension" name="line_spacing"/>
+        <attr format="dimension" name="scene_spacing"/>
+        <attr format="dimension" name="row_text_padding"/>
+
+        <attr format="dimension" name="item_size"/>
+        <attr format="dimension" name="scene_width">
+            <enum name="full" value="-1"/>
+        </attr>
+        <attr format="dimension" name="scene_height"/>
+        <attr format="dimension" name="selected_text_size"/>
+        <attr format="dimension" name="row_text_size"/>
+
+        <attr format="reference" name="selected_text_font"/>
+        <attr format="reference" name="row_text_font"/>
+
+    </declare-styleable>
+</resources>
