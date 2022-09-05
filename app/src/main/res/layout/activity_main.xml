@@ -21,11 +21,12 @@
 
     <com.example.seatreservations.SeatReservationsView
         android:id="@+id/element"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="300dp"
+        android:layout_height="200dp"
+        app:booked_color="@color/pink"
         app:item_drawable="@drawable/default_shape"
-        app:item_size="40dp"
-        app:item_spacing="40dp"
+        app:item_size="20dp"
+        app:item_spacing="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button"
@@ -33,10 +34,10 @@
         app:row_text_size="10sp"
         app:rows_spacing="40dp"
         app:scene_drawable="@drawable/default_scene_shape"
-        app:scene_height="25dp"
-        app:scene_width="400dp"
+        app:scene_height="60dp"
+        app:scene_width="60dp"
+        app:is_rect="false"
         app:selected_color="@color/green"
-        app:booked_color="@color/pink"
         app:selected_text_color="@color/white"
         app:selected_text_size="30sp" />
 

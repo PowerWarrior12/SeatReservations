@@ -1,12 +1,13 @@
 package com.example.seatreservations
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import androidx.core.graphics.withClip
+import java.lang.Math.PI
+import kotlin.math.acos
+import kotlin.math.hypot
+import kotlin.math.sqrt
 
 inline fun <T, R: Comparable<R>> Array<out T>.maxFrom(default: R, choice: (T) -> R?): R {
     var max: R? = null
@@ -55,3 +56,15 @@ fun Canvas.drawText(text: String, rect: Rect, paint: Paint, align: Paint.Align) 
 }
 
 fun Paint.getTextBaselineByCenter(center: Float) = center - (descent() + ascent()) / 2
+
+fun degreeToRadian(degree: Float): Float = (PI / 180 * degree).toFloat()
+
+fun radianToDegree(radian: Float): Float = (radian / (PI / 180)).toFloat()
+
+fun distanceBtwPoints(point1: Point, point2: Point) = sqrt(((point1.x - point2.x)*(point1.x - point2.x)+(point1.y - point2.y)*(point1.y - point2.y)).toDouble())
+
+fun degreeToPoint(point: Point): Float {
+    val scalMult = 1 * point.x + 0 * point.y
+    val module = hypot(point.x.toFloat(), point.y.toFloat())
+    return acos(scalMult / module)
+}

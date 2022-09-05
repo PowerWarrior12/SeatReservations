@@ -1,11 +1,13 @@
 package com.example.seatreservations
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.seatreservations.SeatReservationsView.SeatReservationState.*
+import com.example.seatreservations.SeatReservationState.*
 
 class MainActivity : AppCompatActivity() {
+    @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -13,17 +15,10 @@ class MainActivity : AppCompatActivity() {
         val seatReservationsView = findViewById<SeatReservationsView>(R.id.element)
 
         val map = arrayOf(
-            arrayOf(EMPTY, EMPTY, EMPTY, BOOKED, BOOKED, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, BOOKED, BOOKED, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, BOOKED, BOOKED, BOOKED, BOOKED, BOOKED, BOOKED, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY),
-            arrayOf(FREE, FREE, FREE, FREE, BOOKED, BOOKED, FREE, BOOKED, BOOKED, BOOKED, FREE, FREE, FREE),
+            arrayOf(FREE, FREE, FREE, FREE, FREE, FREE, FREE),
+            arrayOf(FREE, SELECTED, FREE, FREE, FREE),
+            arrayOf(FREE, FREE, FREE, FREE, FREE, FREE, FREE),
+            arrayOf(BOOKED, BOOKED, BOOKED, FREE, FREE, FREE, SELECTED),
         )
 
         seatReservationsView.updateMap(map)

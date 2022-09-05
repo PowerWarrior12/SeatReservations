@@ -10,15 +10,13 @@ import android.view.View
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.annotation.Px
-import androidx.core.graphics.contains
-import com.example.seatreservations.SeatReservationsView.SeatReservationState
-import com.example.seatreservations.SeatReservationsView.SeatReservationState.*
-import java.lang.Integer.max
-import java.lang.Integer.min
+import com.example.seatreservations.SeatReservationState.*
+import com.example.seatreservations.shapes.CircleSeatShape
+import com.example.seatreservations.shapes.RectSeatShape
+import com.example.seatreservations.shapes.SeatShape
 import kotlin.math.roundToInt
 
 private const val MEASURED_ERROR = "Error with measured"
-private const val DEFAULT_ITEM_SPACE_RATIO = 0.8f
 private const val DEFAULT_ITEM_SELECTED_TEXT_RATIO = 0.8f
 private const val DEFAULT_ITEM_ROW_TEXT_RATIO = 0.6f
 
@@ -95,6 +93,8 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
     @DrawableRes
     private var itemDrawable: Int = DEFAULT_ITEM_DRAWABLE
 
+    private var isRect: Boolean = DEFAULT_IS_RECT
+
     private var selectedFontReference: Int = DEFAULT_SELECTED_TEXT_FONT
     private var rowFontReference: Int = DEFAULT_ROW_TEXT_FONT
 
@@ -112,15 +112,9 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
 
     private var map: Array<Array<SeatReservationState>> = TEST_MAP
 
-    private var rowsDisplay: Array<RowDisplay?> = emptyArray()
-
-    private val calculateViewHeightByItems
-        get() = (itemSize + itemSpacing) * map.size - lineSpacing + sceneHeight + sceneSpacing
-
-    private val calculateViewWidthByItems
-        get() = (itemSize + lineSpacing) * map.maxFrom(0) { it.size } - itemSpacing + (rowsTextPadding + rowsSpacing) * 2
-
     private val sceneRect: Rect = Rect()
+
+    private val shape: SeatShape
 
     init {
         context.obtainStyledAttributes(attrs, R.styleable.seat_reservation).apply {
@@ -153,6 +147,8 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
                 selectedFontReference =
                     getResourceId(R.styleable.seat_reservation_selected_text_font, DEFAULT_SELECTED_TEXT_FONT)
                 rowFontReference = getResourceId(R.styleable.seat_reservation_selected_text_font, DEFAULT_ROW_TEXT_FONT)
+
+                isRect = getBoolean(R.styleable.seat_reservation_is_rect, DEFAULT_IS_RECT)
 
             } finally {
                 recycle()
@@ -189,25 +185,60 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
                 Typeface.DEFAULT
             }
         }
+
+
+        if (isRect) {
+            shape = RectSeatShape(
+                itemSize,
+                rowsTextPadding,
+                rowsSpacing,
+                width,
+                height,
+                itemBitmap,
+                ::getPaintByState,
+                itemSpacing,
+                lineSpacing,
+                sceneWidth,
+                sceneHeight + sceneSpacing,
+            )
+        } else {
+            shape = CircleSeatShape(
+                itemBitmap,
+                itemSize,
+                width,
+                height,
+                rowsSpacing,
+                rowsTextPadding,
+                ::getPaintByState,
+                sceneHeight + sceneSpacing,
+                sceneWidth,
+                lineSpacing,
+                itemSpacing
+            )
+        }
+
+        shape.map = map
     }
 
     @SuppressLint("DrawAllocation")
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val widthByItems = calculateViewWidthByItems
-        val heightByItems = calculateViewHeightByItems
+        val widthByItems = shape.calculateWidth
+        val heightByItems = shape.calculateHeight
         var width = calculateDefaultSize(widthByItems, widthMeasureSpec)
         var height = calculateDefaultSize(heightByItems, heightMeasureSpec)
 
-        if (recalculateItemSize(width, height, widthByItems, heightByItems)) {
-            width = calculateDefaultSize(calculateViewWidthByItems, widthMeasureSpec)
-            height = calculateDefaultSize(calculateViewHeightByItems, heightMeasureSpec)
+        if (recalculateItemSize(width, height)) {
+            width = calculateDefaultSize(shape.calculateWidth, widthMeasureSpec)
+            height = calculateDefaultSize(shape.calculateHeight, heightMeasureSpec)
 
-            recalculateSelectedTextSize()
-            recalculateRowTextSize()
+            recalculateSelectedTextSize(shape.itemSize)
+            recalculateRowTextSize(shape.itemSize)
 
-            updateRowsDisplay()
-
+            shape.updateDisplay()
         }
+
+        shape.width = width
+        shape.height = height
 
         setMeasuredDimension(width, height)
     }
@@ -225,7 +256,7 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
             bottom = sceneHeight
         }
 
-        rowsDisplay = prepareRowsDisplay(map)
+        shape.prepareDisplay()
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -243,13 +274,14 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
 
     fun updateMap(map: Array<Array<SeatReservationState>>) {
         this.map = map
-        rowsDisplay = prepareRowsDisplay(map)
+        shape.map = map
+        shape.prepareDisplay()
         requestLayout()
         invalidate()
     }
 
     fun setOnClickListener(listener: OnItemClickListener) {
-        onItemClickListener = listener
+        shape.setOnClickListener(listener)
     }
 
     fun deleteOnClickListener() {
@@ -375,47 +407,8 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
     }
 
     private fun Canvas.drawHall() {
-        rowsDisplay.forEach { rowDisplay ->
-            rowDisplay?.draw(this)
-        }
+        shape.draw(this, rowTextPaint)
     }
-
-    private fun updateRowsDisplay() {
-        rowsDisplay.forEachIndexed { rowIndex, rowDisplay ->
-            rowDisplay?.let {
-                it.updatePosition(getYPositionByIndex(rowIndex))
-                it.updateRectangles(rowsTextPadding, rowsSpacing)
-                it.placeDisplays.forEachIndexed { indexPlace, placeDisplay ->
-                    placeDisplay?.updatePositionPoint(getPositionByIndexes(Point(indexPlace, rowIndex)))
-                    placeDisplay?.updateRect()
-                }
-            }
-        }
-    }
-
-    private fun prepareRowsDisplay(map: Array<Array<SeatReservationState>>): Array<RowDisplay?> {
-        var rowPosition = 1
-        return map.mapIndexed { rowIndex, array ->
-            if (array.count { state -> state != EMPTY } > 0) {
-                var placePosition = 1
-                RowDisplay(rowPosition++, getYPositionByIndex(rowIndex), array.mapIndexed { placeIndex, state ->
-                    if (state != EMPTY) {
-                        PlaceDisplay(
-                            state,
-                            placePosition++,
-                            getPositionByIndexes(Point(placeIndex, rowIndex)),
-                            itemBitmap
-                        )
-                    } else {
-                        null
-                    }
-                }.toTypedArray())
-            } else {
-                null
-            }
-        }.toTypedArray()
-    }
-
 
     private fun calculateDefaultSize(calculatingSize: Int, measureSpec: Int): Int {
         val measuredSize = MeasureSpec.getSize(measureSpec)
@@ -432,50 +425,24 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
 
     /**
      *
-     * The value of item size and item spacing is recalculated, depending on the set view sizes.
+     * The value of shapes item size and item spacing is recalculated, depending on the set view sizes.
      * They will be changed if the set dimensions of the view do not correspond to the calculations by the dimensions of the view elements.
-     *
      *
      * @param width measured width
      * @param height measured height
-     * @param widthByItems the width obtained based on the size of items
-     * @param heightByItems the height obtained based on the size of items
      *
      * @return true, if there was a recalculation of the size, false if not
      */
-    private fun recalculateItemSize(width: Int, height: Int, widthByItems: Int, heightByItems: Int): Boolean {
-
-        fun recalculateItemSize(size: Int) {
-            val count = max(map.size, map.maxFrom(0) { it.size })
-            val calculateItemSize =
-                size / (DEFAULT_ITEM_SPACE_RATIO * count + (1 - DEFAULT_ITEM_SPACE_RATIO) * (count - 1))
-            itemSize = (calculateItemSize * DEFAULT_ITEM_SPACE_RATIO).roundToInt()
-            itemSpacing = (calculateItemSize * (1 - DEFAULT_ITEM_SPACE_RATIO)).roundToInt()
-            lineSpacing = itemSpacing
-        }
-
-        if (heightByItems != height && widthByItems != width) {
-            recalculateItemSize(min(width - (rowsTextPadding + rowsSpacing) * 2, height - sceneSpacing - sceneHeight))
-            return true
-        }
-        if (heightByItems != height) {
-            recalculateItemSize(height - sceneSpacing - sceneHeight)
-            return true
-        }
-        if (widthByItems != width) {
-            recalculateItemSize(width - (rowsTextPadding + rowsSpacing) * 2)
-            return true
-        }
-
-        return false
+    private fun recalculateItemSize(width: Int, height: Int): Boolean {
+        return shape.recalculateParams(width, height)
     }
 
-    private fun recalculateSelectedTextSize() {
+    private fun recalculateSelectedTextSize(itemSize: Int) {
         selectedTextSize = (itemSize * DEFAULT_ITEM_SELECTED_TEXT_RATIO).toInt()
         selectedTextPaint.textSize = selectedTextSize.toFloat()
     }
 
-    private fun recalculateRowTextSize() {
+    private fun recalculateRowTextSize(itemSize: Int) {
         rowTextSize = (itemSize * DEFAULT_ITEM_ROW_TEXT_RATIO).toInt()
         rowTextPaint.textSize = rowTextSize.toFloat()
     }
@@ -487,159 +454,14 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
         EMPTY -> null
     }
 
-    private fun getPositionByIndexes(indexes: Point): Point {
-        return Point().apply {
-            x = rowsSpacing + indexes.x * (itemSpacing + itemSize)
-            y = getYPositionByIndex(indexes.y)
-        }
-    }
-
-    private fun getYPositionByIndex(index: Int) = sceneHeight + sceneSpacing + index * (lineSpacing + itemSize)
-
-    private fun getIndexesByPosition(position: Point): Point {
-        return Point().apply {
-            x = (position.x - rowsSpacing) / (itemSize + itemSpacing)
-            y = (position.y - sceneHeight - sceneSpacing) / (itemSize + lineSpacing)
-        }
-    }
-
     private fun handleClick(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {
             val position = Point(event.x.roundToInt(), event.y.roundToInt())
-            val indexes = getIndexesByPosition(position)
-            val rowDisplay = rowsDisplay.getOrNull(indexes.y)
-            val placeDisplay = rowDisplay?.placeDisplays?.getOrNull(indexes.x)
-            if (placeDisplay != null) {
-                val newState = placeDisplay.click()
-                map[indexes.y][indexes.x] = newState
-                onItemClickListener?.onItemClick(newState, Pair(rowDisplay.getRowNumber(), placeDisplay.getSeatPosition()))
+            shape.click(position) {
                 invalidate()
             }
         }
         return false
-    }
-
-    enum class SeatReservationState(val index: Int) {
-        SELECTED(1), BOOKED(2), FREE(3), EMPTY(0)
-    }
-
-    fun interface OnItemClickListener {
-        /**
-         * @param newState New state after clicking on the seat
-         * @param seatNumber The number of the seat, the first parameter is a row, the second is a number in a row
-         */
-        fun onItemClick(newState: SeatReservationState, seatNumber: Pair<Int, Int>)
-    }
-
-    /**
-     * A class for visualizing a row, stores the
-     * seat status, number, position, bitmap for rendering, and methods for rendering,
-     * obtaining a position, processing a click and updating basic parameters
-     */
-    private inner class PlaceDisplay(
-        private var state: SeatReservationState,
-        private var seatPosition: Int,
-        private val positionPoint: Point,
-        private val itemBitmap: Bitmap,
-    ) {
-        private val rect: Rect = Rect()
-
-        init {
-            updateRect()
-        }
-
-        fun draw(canvas: Canvas) {
-            canvas.drawBitmap(itemBitmap, null, rect, getPaintByState(state))
-            if (state == SELECTED) {
-                canvas.drawText(seatPosition.toString(), rect, selectedTextPaint, Paint.Align.CENTER)
-            }
-        }
-
-        fun getSeatPosition(): Int {
-            return seatPosition
-        }
-
-        fun click(): SeatReservationState {
-            if (state == FREE) {
-                state = SELECTED
-            } else if (state == SELECTED) {
-                state = FREE
-            }
-            return state
-        }
-
-        fun updatePositionPoint(newPositionPoint: Point) {
-            positionPoint.apply {
-                x = newPositionPoint.x
-                y = newPositionPoint.y
-            }
-        }
-
-        fun updateRect() {
-            rect.apply {
-                left = positionPoint.x
-                right = positionPoint.x + itemSize
-                top = positionPoint.y
-                bottom = positionPoint.y + itemSize
-            }
-        }
-
-        fun hasPosition(position: Point): Boolean = rect.contains(position)
-    }
-
-    /**
-     * A class for visualizing a row
-     */
-    private inner class RowDisplay(
-        private val rowNumber: Int,
-        private var position: Int,
-        val placeDisplays: Array<PlaceDisplay?>
-    ) {
-        private val rectLeft = Rect()
-        private val rectRight = Rect()
-
-        init {
-            updateRectangles(rowsTextPadding, rowsSpacing)
-        }
-
-        fun draw(canvas: Canvas) {
-            canvas.apply {
-                placeDisplays.forEach { placeDisplay ->
-                    drawRaw(this)
-                    placeDisplay?.draw(this)
-                }
-            }
-        }
-
-        fun getRowNumber(): Int {
-            return rowNumber
-        }
-
-        fun updatePosition(newPosition: Int) {
-            position = newPosition
-        }
-
-        fun updateRectangles(textPadding: Int, rowSpacing: Int) {
-            rectLeft.apply {
-                left = textPadding
-                right = rowSpacing
-                top = position
-                bottom = position + itemSize
-            }
-            rectRight.apply {
-                left = width - rowSpacing
-                right = width - textPadding
-                top = position
-                bottom = position + itemSize
-            }
-        }
-
-        private fun drawRaw(canvas: Canvas) {
-            canvas.apply {
-                drawText(rowNumber.toString(), rectLeft, rowTextPaint, Paint.Align.LEFT)
-                drawText(rowNumber.toString(), rectRight, rowTextPaint, Paint.Align.RIGHT)
-            }
-        }
     }
 
     companion object {
@@ -667,18 +489,13 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
         const val DEFAULT_SELECTED_TEXT_FONT = -1
         const val DEFAULT_ROW_TEXT_FONT = -1
 
+        const val DEFAULT_IS_RECT = true
+
         private val TEST_MAP = arrayOf(
-            arrayOf(EMPTY, EMPTY, EMPTY, BOOKED, BOOKED, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, SELECTED, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, BOOKED, BOOKED, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, BOOKED, BOOKED, BOOKED, BOOKED, BOOKED, BOOKED, SELECTED, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, FREE, EMPTY, EMPTY),
-            arrayOf(EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY),
-            arrayOf(FREE, FREE, FREE, FREE, BOOKED, BOOKED, FREE, BOOKED, BOOKED, BOOKED, FREE, FREE, FREE),
+            arrayOf(FREE, FREE, FREE, FREE, FREE, FREE, FREE),
+            arrayOf(FREE, SELECTED, FREE, FREE, FREE),
+            arrayOf(FREE, FREE, FREE, FREE, FREE, FREE, FREE),
+            arrayOf(BOOKED, BOOKED, BOOKED, FREE, FREE, FREE, SELECTED),
         )
     }
 
