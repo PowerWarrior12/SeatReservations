@@ -27,5 +27,8 @@
         <attr format="reference" name="selected_text_font"/>
         <attr format="reference" name="row_text_font"/>
 
+
+        <attr format="boolean" name="is_rect"/>
+
     </declare-styleable>
 </resources>
