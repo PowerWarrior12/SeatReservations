@@ -12,7 +12,7 @@ class PlaceDisplay(
     private var state: SeatReservationState,
     private var seatPosition: Int,
     private var itemSize: Int,
-    val positionPoint: Point,
+    private val positionPoint: Point,
     private val itemBitmap: Bitmap,
     private val getPaintByState: (SeatReservationState) -> Paint?
 ) {
@@ -56,6 +56,8 @@ class PlaceDisplay(
             y = newPositionPoint.y
         }
     }
+
+    fun getPositionPoint() = positionPoint
 
     fun updateRect() {
         rect.apply {

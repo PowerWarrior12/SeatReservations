@@ -8,15 +8,13 @@ import com.example.seatreservations.OnItemClickListener
 import com.example.seatreservations.SeatReservationState
 
 abstract class SeatShape(
-    var itemBitmap: Bitmap, var width: Int, var height: Int, var itemSize: Int,
-    var rowsTextPadding: Int,
-    var rowsSpacing: Int,
-    var getPaintByState: (SeatReservationState) -> Paint?
+    private val seatShapeConfig: SeatShapeConfig
 ) {
     /**
      * Calculated height taking into account the dimensions of the parameters
      */
     abstract val calculateHeight: Int
+
     /**
      * Calculated width taking into account the dimensions of the parameters
      */
@@ -32,6 +30,34 @@ abstract class SeatShape(
     fun setOnClickListener(listener: OnItemClickListener) {
         onItemClickListener = listener
     }
+
+    fun updateItemSize(newItemSize: Int) {
+        seatShapeConfig.itemSize = newItemSize
+    }
+    fun updateWidth(newWidth: Int) {
+        seatShapeConfig.width = newWidth
+    }
+    fun updateHeight(newHeight: Int) {
+        seatShapeConfig.height = newHeight
+    }
+    fun updateItemSpacing(newItemSpacing: Int) {
+        seatShapeConfig.itemSpacing = newItemSpacing
+    }
+    fun updateLineSpacing(newLineSpacing: Int) {
+        seatShapeConfig.lineSpacing = newLineSpacing
+    }
+
+    fun getItemSize() = seatShapeConfig.itemSize
+    fun getWidth() = seatShapeConfig.width
+    fun getHeight() = seatShapeConfig.height
+    fun getItemSpacing() = seatShapeConfig.itemSpacing
+    fun getLineSpacing() = seatShapeConfig.lineSpacing
+    fun getCoreHeight() = seatShapeConfig.coreHeight
+    fun getCoreWidth() = seatShapeConfig.coreWidth
+    fun getRowsTextPadding() = seatShapeConfig.rowsTextPadding
+    fun getPaintByStyle() = seatShapeConfig.getPaintByState
+    fun getRowsSpacing() = seatShapeConfig.rowsSpacing
+    fun getItemBitmap() = seatShapeConfig.itemBitmap
 
     /**
      * Preparing the shape display
@@ -58,4 +84,15 @@ abstract class SeatShape(
      * Drawing a shape
      */
     abstract fun draw(canvas: Canvas, rowTextPaint: Paint)
+
+    data class SeatShapeConfig(
+        var itemBitmap: Bitmap, var width: Int, var height: Int, var itemSize: Int,
+        var rowsTextPadding: Int,
+        var rowsSpacing: Int,
+        var getPaintByState: (SeatReservationState) -> Paint?,
+        var lineSpacing: Int,
+        var itemSpacing: Int,
+        var coreHeight: Int,
+        var coreWidth: Int
+    )
 }

@@ -10,26 +10,16 @@ import kotlin.math.roundToInt
 private const val DEFAULT_ITEM_SPACE_RATIO = 0.8f
 
 class RectSeatShape(
-    itemSize: Int,
-    rowsTextPadding: Int,
-    rowsSpacing: Int,
-    width: Int,
-    height: Int,
-    itemBitmap: Bitmap,
-    getPaintByState: (SeatReservationState) -> Paint?,
-    var itemSpacing: Int,
-    var lineSpacing: Int,
-    var coreWidth: Int,
-    var coreHeight: Int
-): SeatShape(itemBitmap, width, height, itemSize, rowsTextPadding, rowsSpacing, getPaintByState) {
+    shapeConfig: SeatShapeConfig
+): SeatShape(shapeConfig) {
 
     private var rowsDisplay: Array<RowDisplay?> = emptyArray()
 
     override val calculateHeight: Int
-        get() = (itemSize + itemSpacing) * map.size - lineSpacing + coreHeight
+        get() = (getItemSize() + getItemSpacing()) * map.size - getLineSpacing() + getCoreHeight()
 
     override val calculateWidth: Int
-        get() = (itemSize + lineSpacing) * map.maxFrom(0) { it.size } - itemSpacing + (rowsTextPadding + rowsSpacing) * 2
+        get() = (getItemSize() + getLineSpacing()) * map.maxFrom(0) { it.size } - getItemSpacing() + (getRowsTextPadding() + getRowsSpacing()) * 2
 
     override fun prepareDisplay() {
         var rowPosition = 1
@@ -41,10 +31,10 @@ class RectSeatShape(
                         PlaceDisplay(
                             state,
                             placePosition++,
-                            itemSize,
+                            getItemSize(),
                             getPositionByIndexes(Point(placeIndex, rowIndex)),
-                            itemBitmap,
-                            getPaintByState
+                            getItemBitmap(),
+                            getPaintByStyle()
                         )
                     } else {
                         null
@@ -60,7 +50,7 @@ class RectSeatShape(
         rowsDisplay.forEachIndexed { rowIndex, rowDisplay ->
             rowDisplay?.let {
                 it.updatePosition(getYPositionByIndex(rowIndex))
-                it.updateRectangles(rowsTextPadding, rowsSpacing)
+                it.updateRectangles(getRowsTextPadding(), getRowsSpacing())
                 it.placeDisplays.forEachIndexed { indexPlace, placeDisplay ->
                     placeDisplay?.updatePositionPoint(getPositionByIndexes(Point(indexPlace, rowIndex)))
                     placeDisplay?.updateRect()
@@ -74,9 +64,9 @@ class RectSeatShape(
         fun recalculateItemSize(size: Int) {
             val count = Integer.max(map.size, map.maxFrom(0) { it.size })
             val calculateItemSize = size / (DEFAULT_ITEM_SPACE_RATIO * count + (1 - DEFAULT_ITEM_SPACE_RATIO) * (count - 1))
-            itemSize = (calculateItemSize * DEFAULT_ITEM_SPACE_RATIO).roundToInt()
-            itemSpacing = (calculateItemSize * (1 - DEFAULT_ITEM_SPACE_RATIO)).roundToInt()
-            lineSpacing = itemSpacing
+            updateItemSize((calculateItemSize * DEFAULT_ITEM_SPACE_RATIO).roundToInt())
+            updateItemSpacing((calculateItemSize * (1 - DEFAULT_ITEM_SPACE_RATIO)).roundToInt())
+            updateLineSpacing(getItemSpacing())
         }
 
         val widthByItems = calculateWidth
@@ -85,18 +75,18 @@ class RectSeatShape(
         if (heightByItems != height && widthByItems != width) {
             recalculateItemSize(
                 Integer.min(
-                    width - (rowsTextPadding + rowsSpacing) * 2,
-                    height - coreHeight
+                    width - (getRowsTextPadding() + getRowsSpacing()) * 2,
+                    height - getCoreHeight()
                 )
             )
             return true
         }
         if (heightByItems != height) {
-            recalculateItemSize(height - coreHeight)
+            recalculateItemSize(height - getCoreHeight())
             return true
         }
         if (widthByItems != width) {
-            recalculateItemSize(width - (rowsTextPadding + rowsSpacing) * 2)
+            recalculateItemSize(width - (getRowsTextPadding() + getRowsSpacing()) * 2)
             return true
         }
 
@@ -124,16 +114,16 @@ class RectSeatShape(
 
     private fun getIndexesByPositionNormal(position: Point): Point {
         return Point().apply {
-            x = (position.x - rowsSpacing) / (itemSize + itemSpacing)
-            y = (position.y - coreHeight) / (itemSize + lineSpacing)
+            x = (position.x - getRowsSpacing()) / (getItemSize() + getItemSpacing())
+            y = (position.y - getCoreHeight()) / (getItemSize() + getLineSpacing())
         }
     }
 
-    private fun getYPositionByIndex(index: Int) = coreHeight + index * (lineSpacing + itemSize)
+    private fun getYPositionByIndex(index: Int) = getCoreHeight() + index * (getLineSpacing() + getItemSize())
 
     private fun getPositionByIndexes(indexes: Point): Point {
         return Point().apply {
-            x = rowsSpacing + indexes.x * (itemSpacing + itemSize)
+            x = getRowsSpacing() + indexes.x * (getItemSpacing() + getItemSize())
             y = getYPositionByIndex(indexes.y)
         }
     }
@@ -150,7 +140,7 @@ class RectSeatShape(
         private val rectRight = Rect()
 
         init {
-            updateRectangles(rowsTextPadding, rowsSpacing)
+            updateRectangles(getRowsTextPadding(), getRowsSpacing())
         }
 
         fun draw(canvas: Canvas, rowTextPaint: Paint) {
@@ -175,13 +165,13 @@ class RectSeatShape(
                 left = textPadding
                 right = rowSpacing
                 top = position
-                bottom = position + itemSize
+                bottom = position + getItemSize()
             }
             rectRight.apply {
-                left = width - rowSpacing
-                right = width - textPadding
+                left = getWidth() - rowSpacing
+                right = getWidth() - textPadding
                 top = position
-                bottom = position + itemSize
+                bottom = position + getItemSize()
             }
         }
 

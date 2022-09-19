@@ -10,24 +10,14 @@ import kotlin.math.*
 private const val DEFAULT_ITEM_SPACE_RATIO = 0.8f
 
 class CircleSeatShape(
-    itemBitmap: Bitmap,
-    itemSize: Int,
-    width: Int,
-    height: Int,
-    rowTextSpacing: Int,
-    rowTextPadding: Int,
-    getPaintByState: (SeatReservationState) -> Paint?,
-    var coreHeight: Int,
-    var coreWidth: Int,
-    var lineSpacing: Int,
-    var itemSpacing: Int,
-) : SeatShape(itemBitmap, width, height, itemSize, rowTextPadding, rowTextSpacing, getPaintByState) {
+    private val circleShapeConfig: SeatShapeConfig
+) : SeatShape(circleShapeConfig) {
 
     override val calculateHeight: Int
-        get() = getRowDistance(map.size - 1) + coreHeight / 2
+        get() = getRowDistance(map.size - 1) + getCoreHeight() / 2
 
     override val calculateWidth: Int
-        get() = (getRowDistance(map.size - 1) + itemSize) * 2
+        get() = (getRowDistance(map.size - 1) + getItemSize()) * 2
 
     private var rowsDisplay: Array<RowDisplay?> = emptyArray()
 
@@ -41,13 +31,13 @@ class CircleSeatShape(
                         PlaceDisplay(
                             state,
                             placePosition++,
-                            itemSize,
+                            getItemSize(),
                             getPositionByIndexesCircle(
                                 Point(placeIndex, rowIndex),
                                 getAngleByIndex(placeIndex, array.size)
                             ),
-                            itemBitmap,
-                            getPaintByState
+                            getItemBitmap(),
+                            getPaintByStyle()
                         )
                     } else {
                         null
@@ -79,45 +69,52 @@ class CircleSeatShape(
     override fun recalculateParams(width: Int, height: Int): Boolean {
 
         fun recalculateItemSize(size: Int) {
-            val count = map.size
-            val calculateItemSize = size / count
-            itemSize = (calculateItemSize * DEFAULT_ITEM_SPACE_RATIO).roundToInt()
-            itemSpacing = (calculateItemSize * (1 - DEFAULT_ITEM_SPACE_RATIO)).roundToInt()
+            circleShapeConfig.apply {
+                val count = map.size
+                val calculateItemSize = size / count
+                updateItemSize((calculateItemSize * DEFAULT_ITEM_SPACE_RATIO).roundToInt())
+                updateItemSpacing((calculateItemSize * (1 - DEFAULT_ITEM_SPACE_RATIO)).roundToInt())
 
-            val maxWidthCount = map.maxFrom(0) { it.size }
-            val circleLength = 2 * PI * hypot(coreHeight.toFloat()/2, coreWidth.toFloat()/2) / 2
-            //If the items dimensions do not fit into the smallest circle
-            if (itemSize * (maxWidthCount - 1) > circleLength) {
-                itemSize = (circleLength / maxWidthCount).toInt()
-                itemSpacing = (itemSize / DEFAULT_ITEM_SPACE_RATIO * (1 * DEFAULT_ITEM_SPACE_RATIO)).toInt()
+                val maxWidthCount = map.maxFrom(0) { it.size }
+                val circleLength = 2 * PI * hypot(getCoreHeight().toFloat() / 2, getCoreWidth().toFloat() / 2) / 2
+                //If the items dimensions do not fit into the smallest circle
+                if (getItemSize() * (maxWidthCount - 1) > circleLength) {
+                    updateItemSize((circleLength / maxWidthCount).toInt())
+                    updateItemSpacing((getItemSize() / DEFAULT_ITEM_SPACE_RATIO * (1 * DEFAULT_ITEM_SPACE_RATIO)).toInt())
+
+                }
+
+                updateLineSpacing(getItemSpacing())
             }
 
-            lineSpacing = itemSpacing
         }
 
-        val widthByItems = calculateWidth
-        val heightByItems = calculateHeight
-        val coreHypot = hypot(coreHeight.toFloat()/2, coreWidth.toFloat()/2).toInt()
+        circleShapeConfig.apply {
 
-        if (heightByItems != height && widthByItems != width) {
-            recalculateItemSize(
-                Integer.min(
-                    width/2 - coreHypot,
-                    height - coreHypot - coreHeight/2
+            val widthByItems = calculateWidth
+            val heightByItems = calculateHeight
+            val coreHypot = hypot(getCoreHeight().toFloat() / 2, getCoreWidth().toFloat() / 2).toInt()
+
+            if (heightByItems != height && widthByItems != width) {
+                recalculateItemSize(
+                    Integer.min(
+                        width / 2 - coreHypot,
+                        height - coreHypot - getCoreHeight() / 2
+                    )
                 )
-            )
-            return true
-        }
-        if (heightByItems != height) {
-            recalculateItemSize(height - coreHypot - coreHeight/2)
-            return true
-        }
-        if (widthByItems != width) {
-            recalculateItemSize(width/2 - coreHypot)
-            return true
-        }
+                return true
+            }
+            if (heightByItems != height) {
+                recalculateItemSize(height - coreHypot - getCoreHeight() / 2)
+                return true
+            }
+            if (widthByItems != width) {
+                recalculateItemSize(width / 2 - coreHypot)
+                return true
+            }
 
-        return false
+            return false
+        }
     }
 
     override fun click(position: Point, onClick: Runnable?) {
@@ -138,15 +135,21 @@ class CircleSeatShape(
         }
     }
 
-    private fun getRowDistance(index: Int) = (hypot(coreHeight.toFloat()/2, coreWidth.toFloat()/2) + (itemSize + lineSpacing) * index + itemSize / 2).toInt()
+    private fun getRowDistance(index: Int) = (hypot(
+        getCoreHeight().toFloat() / 2,
+        getCoreWidth().toFloat() / 2
+    ) + (getItemSize() + getLineSpacing()) * index + getItemSize() / 2).toInt()
 
-    private fun getIndexByRowDistance(distance: Int) = ((distance - hypot(coreHeight.toFloat()/2, coreWidth.toFloat()/2) - itemSize / 2) / (itemSize + lineSpacing)).roundToInt()
+    private fun getIndexByRowDistance(distance: Int) = ((distance - hypot(
+        getCoreHeight().toFloat() / 2,
+        getCoreWidth().toFloat() / 2
+    ) - getItemSize() / 2) / (getItemSize() + getLineSpacing())).roundToInt()
 
     private fun getPositionByIndexesCircle(indexes: Point, angle: Float): Point {
         val radian = degreeToRadian(angle)
         return Point().apply {
-            x = width / 2 + (cos(radian) * getRowDistance(indexes.y)).toInt() - itemSize/2
-            y = coreHeight / 2 + (sin(radian) * getRowDistance(indexes.y)).toInt() - itemSize
+            x = getWidth() / 2 + (cos(radian) * getRowDistance(indexes.y)).toInt() - getItemSize() / 2
+            y = getCoreHeight() / 2 + (sin(radian) * getRowDistance(indexes.y)).toInt() - getItemSize()
         }
     }
 
@@ -157,9 +160,9 @@ class CircleSeatShape(
     }
 
     private fun getIndexesByPosition(position: Point): Point? {
-        val point = Point((position.x - width/2 ), -(position.y - coreHeight/2))
+        val point = Point((position.x - getWidth() / 2), -(position.y - getCoreHeight() / 2))
         val alpha = radianToDegree(degreeToPoint(point))
-        val distance = distanceBtwPoints(position, Point(width/2, coreHeight/2)).toInt()
+        val distance = distanceBtwPoints(position, Point(getWidth() / 2, getCoreHeight() / 2)).toInt()
         val rowNumber = getIndexByRowDistance(distance)
         if (rowNumber in map.indices) {
             return Point().apply {
@@ -181,13 +184,14 @@ class CircleSeatShape(
 
         fun draw(canvas: Canvas, rowTextPaint: Paint) {
             canvas.apply {
-                drawRaw(this, rowTextPaint)
                 placeDisplays.forEachIndexed { index, placeDisplay ->
                     placeDisplay?.let {
                         save()
                         val angle = getAngleByIndex(index, placeDisplays.size)
-                        val positionForRotateX = placeDisplay.positionPoint.x.toFloat() + itemSize / 2
-                        val positionForRotateY = placeDisplay.positionPoint.y.toFloat() + itemSize / 2
+                        val positionForRotateX =
+                            placeDisplay.getPositionPoint().x.toFloat() + getItemSize() / 2
+                        val positionForRotateY =
+                            placeDisplay.getPositionPoint().y.toFloat() + getItemSize() / 2
                         rotate(
                             angle,
                             positionForRotateX,
@@ -214,9 +218,5 @@ class CircleSeatShape(
         fun updateDistance(newDistance: Int) {
             distance = newDistance
         }
-
-        private fun drawRaw(canvas: Canvas, rowTextPaint: Paint) {
-        }
     }
-
 }

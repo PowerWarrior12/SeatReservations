@@ -186,34 +186,27 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
             }
         }
 
+        val shapeConfig = SeatShape.SeatShapeConfig(
+            itemBitmap,
+            width,
+            height,
+            itemSize,
+            rowsTextPadding,
+            rowsSpacing,
+            ::getPaintByState,
+            lineSpacing,
+            itemSpacing,
+            sceneHeight + sceneSpacing,
+            sceneWidth
+        )
 
-        if (isRect) {
-            shape = RectSeatShape(
-                itemSize,
-                rowsTextPadding,
-                rowsSpacing,
-                width,
-                height,
-                itemBitmap,
-                ::getPaintByState,
-                itemSpacing,
-                lineSpacing,
-                sceneWidth,
-                sceneHeight + sceneSpacing,
+        shape = if (isRect) {
+            RectSeatShape(
+                shapeConfig
             )
         } else {
-            shape = CircleSeatShape(
-                itemBitmap,
-                itemSize,
-                width,
-                height,
-                rowsSpacing,
-                rowsTextPadding,
-                ::getPaintByState,
-                sceneHeight + sceneSpacing,
-                sceneWidth,
-                lineSpacing,
-                itemSpacing
+            CircleSeatShape(
+                shapeConfig
             )
         }
 
@@ -231,14 +224,14 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
             width = calculateDefaultSize(shape.calculateWidth, widthMeasureSpec)
             height = calculateDefaultSize(shape.calculateHeight, heightMeasureSpec)
 
-            recalculateSelectedTextSize(shape.itemSize)
-            recalculateRowTextSize(shape.itemSize)
+            recalculateSelectedTextSize(shape.getItemSize())
+            recalculateRowTextSize(shape.getItemSize())
 
             shape.updateDisplay()
         }
 
-        shape.width = width
-        shape.height = height
+        shape.updateWidth(width)
+        shape.updateHeight(height)
 
         setMeasuredDimension(width, height)
     }
@@ -300,18 +293,21 @@ class SeatReservationsView @JvmOverloads constructor(context: Context, attrs: At
 
     fun setItemSize(newItemSize: Int) {
         itemSize = newItemSize
+        shape.updateItemSize(itemSize)
         requestLayout()
         invalidate()
     }
 
     fun setItemSpacing(newItemSpacing: Int) {
         itemSpacing = newItemSpacing
+        shape.updateItemSpacing(itemSpacing)
         requestLayout()
         invalidate()
     }
 
     fun setLineSpacing(newLineSpacing: Int) {
         lineSpacing = newLineSpacing
+        shape.updateLineSpacing(lineSpacing)
         requestLayout()
         invalidate()
     }
